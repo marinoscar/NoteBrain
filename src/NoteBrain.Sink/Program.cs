@@ -26,7 +26,12 @@
         /// <param name="arguments"></param>
         static void DoAction(ConsoleOptions arguments)
         {
-            WriteLine("Hello World");
+            WriteLine("Working with AI");
+            var file = arguments["-file"];
+            var key = arguments["-key"];
+
+            var brain = new AIBrain();
+            brain.DoWorkAsync(key, file, CancellationToken.None).Wait();
         }
 
         /// <summary>
