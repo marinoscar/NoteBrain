@@ -67,6 +67,11 @@ Addionally, create a json file with the following information
                 }
             });
 
+            reply.Metadata?.ToList().ForEach(item =>
+            {
+                Console.WriteLine(item.Key + " : " + item.Value);
+            });
+
             var json = ExtractJsonFromText(sb.ToString());
         }
 
