@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace NoteBrain.Sink
 {
@@ -48,7 +49,13 @@ Addionally, create a json file with the following information
                 new ImageContent(bytes, "image/png")
             });
 
-            var reply = await chatCompletionService.GetChatMessageContentAsync(chatHistory);
+            var settings = new OpenAIPromptExecutionSettings()
+            {
+                Temperature = 0d
+            };
+
+            var reply = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings);
+
 
             var sb = new StringBuilder();
             reply.Items.ToList().ForEach(item =>
