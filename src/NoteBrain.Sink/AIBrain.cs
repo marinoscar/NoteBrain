@@ -7,12 +7,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using System.Diagnostics;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace NoteBrain.Sink
 {
     public class AIBrain
     {
-        public async Task DoWorkAsync(string key, string fileName, CancellationToken cancellationToken)
+        public async Task DoWorkAsync(string key, string[] fileNames, CancellationToken cancellationToken)
         {
             //Create a kernel with gpt-4 vision model
             var kernel = Kernel.CreateBuilder()
@@ -37,40 +40,90 @@ Addionally, create a json file with the following information
 -- assignee of the item (key:assignee)
 ";
 
+            userInput = "Tell me a joke";
+            
 
-            var bytes = File.ReadAllBytes(fileName);
+            var collection = new ChatMessageContentItemCollection();
+            collection.Add(new TextContent(userInput));
+            foreach (var file in fileNames)
+            {
+                var bytes = File.ReadAllBytes(file);
+                var type = new FileInfo(file).Extension switch
+                {
+                    ".png" => "image/png",
+                    ".jpg" => "image/jpeg",
+                    ".jpeg" => "image/jpeg",
+                    ".gif" => "image/gif",
+                    ".bmp" => "image/bmp",
+                    ".pdf" => "application/pdf",
+                    _ => "image/png"
+                };
+                collection.Add(new ImageContent(bytes, type));
+            }
 
             // Add system message
             var chatHistory = new ChatHistory(systemPrompt);
 
-            chatHistory.AddUserMessage(new ChatMessageContentItemCollection
-            {
-                new TextContent(userInput),
-                new ImageContent(bytes, "image/png")
-            });
+            chatHistory.AddUserMessage(collection);
 
-            var settings = new OpenAIPromptExecutionSettings()
+            var settings = new PromptExecutionSettings()
             {
-                Temperature = 0d
+                ExtensionData = new Dictionary<string, object>() {
+                    { "temperature", 0.7 }
+                }
             };
 
-            var reply = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings);
-
-
             var sb = new StringBuilder();
-            reply.Items.ToList().ForEach(item =>
+
+            //var reply = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings);
+
+
+            //reply.Items.ToList().ForEach(item =>
+            //{
+            //    if (item is TextContent textContent)
+            //    {
+            //        Console.WriteLine(textContent.Text);
+            //        sb.AppendLine(textContent.Text);
+            //    }
+            //});
+
+            //reply.Metadata?.ToList().ForEach(item =>
+            //{
+            //    Console.WriteLine(item.Key + " : " + item.Value);
+            //});
+
+            //var items = new List<StreamingChatMessageContent>();
+            //StreamingChatMessageContent? lastContent = null;
+            //await foreach (var content in chatCompletionService.GetStreamingChatMessageContentsAsync(chatHistory, settings, null, cancellationToken))
+            //{
+            //    items.Add(content);
+            //    Console.Write(content.Content);
+            //    sb.Append(content.Content);
+            //    Debug.WriteLineIf(content.Metadata != null && content.Metadata.ContainsKey("FinishReason"),
+            //        content.Metadata["FinishReason"]);
+            //    lastContent = content;
+            //}
+
+            var response = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings, null, cancellationToken);
+            foreach (var item in response.Items)
             {
                 if (item is TextContent textContent)
                 {
                     Console.WriteLine(textContent.Text);
                     sb.AppendLine(textContent.Text);
                 }
-            });
+            }
 
-            reply.Metadata?.ToList().ForEach(item =>
-            {
-                Console.WriteLine(item.Key + " : " + item.Value);
-            });
+
+
+
+            //var output = JsonSerializer.Serialize(items, new JsonSerializerOptions
+            //{
+            //    WriteIndented = true,
+            //    ReferenceHandler = ReferenceHandler.IgnoreCycles
+            //});
+
+            //File.WriteAllText("output.json", output);
 
             var json = ExtractJsonFromText(sb.ToString());
         }

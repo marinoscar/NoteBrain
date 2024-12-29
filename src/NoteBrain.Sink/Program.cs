@@ -31,7 +31,8 @@
             var key = arguments["-key"];
 
             var brain = new AIBrain();
-            brain.DoWorkAsync(key, file, CancellationToken.None).Wait();
+            
+            brain.DoWorkAsync(key, file.Split(";"), CancellationToken.None).Wait();
         }
 
         /// <summary>
